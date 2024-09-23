@@ -53,8 +53,8 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            const supabaseUrl = config.API_URL_SUPABASE;
-            const supabaseKey = config.API_KEY_SUPABASE;
+            const supabaseUrl = API_URL_SUPABASE;
+            const supabaseKey = API_KEY_SUPABASE;
             const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
             function mostrarToast(mensaje, tipo = 'success') {

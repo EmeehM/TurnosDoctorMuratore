@@ -44,15 +44,15 @@
     <div id="mensaje" class="text-center text-red-500"></div>
 
     <script>
-        const supabaseUrl = config.API_URL_SUPABASE;
-        const supabaseKey = config.API_KEY_SUPABASE;
+        const supabaseUrl = API_URL_SUPABASE;
+        const supabaseKey = API_KEY_SUPABASE;
         const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         document.getElementById('access-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const codigo = document.getElementById('codigo').value;
 
-            if (codigo === config.CODIGO_ACCESO) { 
+            if (codigo === CODIGO_ACCESO) { 
                 document.getElementById('access-code').classList.add('hidden');
                 document.getElementById('records-table').classList.remove('hidden');
                 await cargarRegistros();
