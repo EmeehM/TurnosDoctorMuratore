@@ -1,4 +1,5 @@
-require('dotenv').config(); 
+require('dotenv').config();
+import process from 'process';
 const config = {
     API_KEY_SUPABASE: process.env.REACT_API_KEY_SUPABASE,
     API_URL_SUPABASE : process.env.REACT_API_KEY_SUPABASE,
