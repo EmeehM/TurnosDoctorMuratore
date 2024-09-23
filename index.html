@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservar Turno</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.js"></script>
+    <script src="config.js"></script>
+</head>
+<body class="bg-gradient-to-r from-gray-800 to-gray-900 flex items-center justify-center min-h-screen">
+
+    <div class="bg-white shadow-md rounded-lg p-6 w-full max-w-4xl lg:max-w-5xl"> <!-- Se aumentó el max-width para pantallas grandes -->
+        <div class="flex items-center justify-between mb-4">
+            <h1 class="text-2xl font-bold text-center text-black">Reservar Turno</h1>
+            <a href="admin.html" class="ml-4 inline-block bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">Administración</a>
+        </div>
+        <form id="turno-form" class="mb-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4"> <!-- Responsive grid -->
+                <div class="mb-4">
+                    <label for="dni" class="block text-sm font-medium text-slate-500">DNI:</label>
+                    <input type="text" id="dni" name="dni" required class="mt-1 block w-full border-gray-600 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
+                </div>
+
+                <div class="mb-4">
+                    <label for="nombre" class="block text-sm font-medium text-slate-500">Nombre Completo:</label>
+                    <input type="text" id="nombre" name="nombre" required class="mt-1 block w-full border-gray-600 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
+                </div>
+
+                <div class="mb-4">
+                    <label for="obra-social" class="block text-sm font-medium text-slate-500">Obra Social:</label>
+                    <input type="text" id="obra-social" name="obra-social" class="mt-1 block w-full border-gray-600 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
+                </div>
+
+                <div class="mb-4">
+                    <label for="numero-asociado" class="block text-sm font-medium text-slate-500">Número de Asociado:</label>
+                    <input type="text" id="numero-asociado" name="numero-asociado" class="mt-1 block w-full border-gray-600 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
+                </div>
+            </div>
+        </form>
+
+        <div id='calendar' class="mb-4"></div>
+
+        <div id="mensaje" class="text-center text-red-500"></div>
+    </div>
+
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/es.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const supabaseUrl = config.API_URL_SUPABASE;
+            const supabaseKey = config.API_KEY_SUPABASE;
+            const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+            function mostrarToast(mensaje, tipo = 'success') {
+                Toastify({
+                    text: mensaje,
+                    duration: 3000,
+                    gravity: 'top',
+                    position: 'right',
+                    backgroundColor: tipo === 'success' ? 'linear-gradient(to right, #4CAF50, #81C784)' : 'linear-gradient(to right, #F44336, #EF5350)',
+                    stopOnFocus: true,
+                }).showToast();
+            }
+
+            async function cargarTurnosOcupados() {
+                const { data: turnos, error } = await supabase
+                    .from('turnos')
+                    .select('horario');
+
+                if (error) {
+                    console.error('Error al cargar turnos ocupados:', error);
+                    return [];
+                }
+
+                return turnos.map(turno => new Date(turno.horario));
+            }
+
+            async function initCalendar() {
+                const horariosOcupados = await cargarTurnosOcupados();
+
+                const calendarEl = document.getElementById('calendar');
+                const calendar = new FullCalendar.Calendar(calendarEl, {
+                    locale: 'es',
+                    initialView: 'timeGridWeek',
+                    selectable: true,
+                    allDaySlot: false,
+                    slotDuration: '00:30:00', 
+                    validRange: {
+                        start: new Date(),
+                    },
+                    events: [], 
+                    eventSources: [
+                        {
+                            events: horariosOcupados.map(hora => ({
+                                start: hora,
+                                end: new Date(hora.getTime() + 30 * 60000),
+                                rendering: 'background',
+                            })),
+                        },
+                    ],
+                    select: async (info) => {
+                        const isOccupied = horariosOcupados.some(hora => 
+                            hora.getTime() === info.start.getTime()
+                        );
+
+                        const now = new Date();
+                        if (info.start < now) {
+                            mostrarToast('No se pueden reservar turnos en horas pasadas.', 'error');
+                            return;
+                        }
+
+                        if (isOccupied) {
+                            mostrarToast('Este horario ya está ocupado.', 'error');
+                            return;
+                        }
+
+                        const { isConfirmed } = await Swal.fire({
+                            title: 'Confirmar Reserva',
+                            text: '¿Deseas reservar este turno?',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonText: 'Sí, reservar',
+                            cancelButtonText: 'Cancelar',
+                        });
+
+                        if (isConfirmed) {
+                            const dni = document.getElementById('dni').value;
+                            const nombre = document.getElementById('nombre').value;
+                            const obraSocial = document.getElementById('obra-social').value;
+                            const numeroAsociado = document.getElementById('numero-asociado').value;
+
+                            const result = await reservarTurno(dni, nombre, obraSocial, numeroAsociado, info.start);
+                            if (result) {
+                                horariosOcupados.push(info.start);
+                                calendar.addEvent({
+                                    start: info.start,
+                                    end: new Date(info.start.getTime() + 30 * 60000),
+                                    rendering: 'background',
+                                });
+                                calendar.unselect();
+                            }
+                        }
+                    },
+                    eventDidMount: (info) => {
+                        const startHour = info.event.start.getHours();
+                        const day = info.event.start.getDay();
+                        if (startHour < 8 || startHour >= 13 || day === 0 || day === 6) {
+                            info.el.style.display = 'none'; 
+                        }
+                    },
+                    businessHours: [
+                        {
+                            daysOfWeek: [1, 2, 3, 4, 5],
+                            startTime: '08:00', 
+                            endTime: '13:00',
+                        },
+                        {
+                            daysOfWeek: [1, 2, 3, 4, 5],
+                            startTime: '17:00', 
+                            endTime: '22:00',
+                        },
+                    ],
+                });
+
+                calendar.render();
+            }
+
+            async function reservarTurno(dni, nombre, obraSocial, numeroAsociado, horario) {
+                const { error } = await supabase
+                    .from('turnos')
+                    .insert([{ dni, nombre, obra_social: obraSocial, numero_asociado: numeroAsociado, horario }]);
+
+                if (error) {
+                    console.error('Error al reservar el turno:', error);
+                    mostrarToast('Error al reservar el turno.', 'error');
+                    return false;
+                }
+
+                mostrarToast('Turno reservado con éxito.');
+                return true;
+            }
+
+            initCalendar();
+        });
+    </script>
+</body>
+</html>

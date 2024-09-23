@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registros de Turnos</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.css">
+    <script src="config.js"></script>
+</head>
+<body class="bg-gradient-to-r from-gray-800 to-gray-900 flex items-center justify-center min-h-screen">
+
+    <div id="access-code" class="bg-white shadow-md rounded-lg p-6 w-full max-w-md mb-4">
+        <h1 class="text-2xl font-bold mb-4 text-center text-black">Acceso a Registros</h1>
+        <form id="access-form">
+            <div class="mb-4">
+                <label for="codigo" class="block text-sm font-medium text-slate-500">Código de Acceso:</label>
+                <input type="password" id="codigo" name="codigo" required class="mt-1 block w-full border-gray-600 rounded-md shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
+            </div>
+            <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded-md">Ingresar</button>
+        </form>
+    </div>
+
+    <div id="records-table" class="hidden bg-white shadow-md rounded-lg p-6 w-full max-w-3xl">
+        <h1 class="text-2xl font-bold mb-4 text-center text-black">Registros de Turnos</h1>
+        <table class="min-w-full bg-white">
+            <thead>
+                <tr>
+                    <th class="py-2 px-4 border-b">DNI</th>
+                    <th class="py-2 px-4 border-b">Nombre</th>
+                    <th class="py-2 px-4 border-b">Obra Social</th>
+                    <th class="py-2 px-4 border-b">Número de Asociado</th>
+                    <th class="py-2 px-4 border-b">Horario</th>
+                    <th class="py-2 px-4 border-b">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+            </tbody>
+        </table>
+    </div>
+
+    <div id="mensaje" class="text-center text-red-500"></div>
+
+    <script>
+        const supabaseUrl = config.API_URL_SUPABASE;
+        const supabaseKey = config.API_KEY_SUPABASE;
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        document.getElementById('access-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const codigo = document.getElementById('codigo').value;
+
+            if (codigo === config.CODIGO_ACCESO) { 
+                document.getElementById('access-code').classList.add('hidden');
+                document.getElementById('records-table').classList.remove('hidden');
+                await cargarRegistros();
+            } else {
+                Toastify({
+                    text: "Código de acceso incorrecto",
+                    duration: 3000,
+                    backgroundColor: "linear-gradient(to right, #FF5F6D, #FFC371)",
+                }).showToast();
+            }
+        });
+
+        async function cargarRegistros() {
+            const { data: turnos, error } = await supabase
+                .from('turnos')
+                .select('*')
+                .order('horario', { ascending: true });  // Ordenar por horario
+
+            if (error) {
+                console.error('Error al cargar los registros:', error);
+                return;
+            }
+
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = ''; 
+
+            turnos.forEach(turno => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="py-2 px-4 border-b">${turno.dni}</td>
+                    <td class="py-2 px-4 border-b">${turno.nombre}</td>
+                    <td class="py-2 px-4 border-b">${turno.obra_social}</td>
+                    <td class="py-2 px-4 border-b">${turno.numero_asociado}</td>
+                    <td class="py-2 px-4 border-b">${new Date(turno.horario).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</td>
+                    <td class="py-2 px-4 border-b">
+                        <button onclick="eliminarRegistro('${turno.id}')" class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md">Eliminar</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        async function eliminarRegistro(id) {
+            const { error } = await supabase
+                .from('turnos')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                Toastify({
+                    text: "Error al eliminar el registro",
+                    duration: 3000,
+                    backgroundColor: "linear-gradient(to right, #FF5F6D, #FFC371)",
+                }).showToast();
+            } else {
+                Toastify({
+                    text: "Registro eliminado con éxito",
+                    duration: 3000,
+                    backgroundColor: "linear-gradient(to right, #6DBF4E, #3EA88D)",
+                }).showToast();
+                await cargarRegistros(); 
+            }
+        }
+    </script>
+</body>
+</html>
