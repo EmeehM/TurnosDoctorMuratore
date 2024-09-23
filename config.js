@@ -1,5 +1,6 @@
+import * as process from './process';
 require('dotenv').config();
-import * as process from '/process/';
+
 const config = {
     API_KEY_SUPABASE: process.env.REACT_API_KEY_SUPABASE,
     API_URL_SUPABASE : process.env.REACT_API_KEY_SUPABASE,
