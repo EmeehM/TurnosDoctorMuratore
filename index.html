@@ -51,12 +51,11 @@
     <script src="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
     <script type="module">
-        require('dotenv').config();
 
         const config = {
-            API_KEY_SUPABASE: process.env.REACT_APP_API_KEY_SUPABASE,
-            API_URL_SUPABASE : process.env.REACT_APP_API_KEY_SUPABASE,
-            CODIGO_ACCESO: process.env.REACT_APP_CODIGO_ACCESO
+            API_KEY_SUPABASE: REACT_APP_API_KEY_SUPABASE,
+            API_URL_SUPABASE : REACT_APP_API_KEY_SUPABASE,
+            CODIGO_ACCESO: REACT_APP_CODIGO_ACCESO
         };
         document.addEventListener('DOMContentLoaded', async () => {
             const supabaseUrl = API_URL_SUPABASE;
